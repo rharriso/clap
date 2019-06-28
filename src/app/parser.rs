@@ -33,6 +33,7 @@ use app::settings::AppSettings as AS;
 use app::validator::Validator;
 use app::usage;
 use map::{self, VecMap};
+use core::borrow::Borrow;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[doc(hidden)]
@@ -957,7 +958,8 @@ where
                                 {
                                     return Err(Error::unknown_argument(
                                         &*arg_os.to_string_lossy(),
-                                        "",
+                                        None,
+                                        false,
                                         &*usage::create_error_usage(self, matcher, None),
                                         self.color(),
                                     ));
@@ -1049,7 +1051,8 @@ where
                 if p.is_set(ArgSettings::Last) && !self.is_set(AS::TrailingValues) {
                     return Err(Error::unknown_argument(
                         &*arg_os.to_string_lossy(),
-                        "",
+                        None,
+                        false,
                         &*usage::create_error_usage(self, matcher, None),
                         self.color(),
                     ));
@@ -1124,7 +1127,8 @@ where
             {
                 return Err(Error::unknown_argument(
                     &*arg_os.to_string_lossy(),
-                    "",
+                    None,
+                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1149,7 +1153,8 @@ where
             } else {
                 return Err(Error::unknown_argument(
                     &*arg_os.to_string_lossy(),
-                    "",
+                    None,
+                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1628,11 +1633,23 @@ where
 
         let args_rest: Vec<_> = it.map(|x| x.clone().into()).collect();
         let args_rest2: Vec<_> = args_rest.iter().map(|x| x.to_str().expect(INVALID_UTF8)).collect();
-        self.did_you_mean_error(
-            arg.to_str().expect(INVALID_UTF8),
-            matcher,
+        let arg_str = arg.to_str().expect(INVALID_UTF8);
+
+        let suggestion =
+         self.get_suggestion(
+            arg_str,
+             matcher,
             &args_rest2[..]
-        ).map(|_| ParseResult::NotFound)
+        );
+        let usage = usage::create_error_usage(self, matcher, None);
+
+        Err(Error::unknown_argument(
+            format!("--{}", arg_str),
+             suggestion,
+             true,
+             &*usage,
+            self.color(),
+        ))
     }
 
     #[cfg_attr(feature = "lints", allow(len_zero))]
@@ -1721,7 +1738,8 @@ where
                 let arg = format!("-{}", c);
                 return Err(Error::unknown_argument(
                     &*arg,
-                    "",
+                    None,
+                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1889,34 +1907,29 @@ where
         Ok(ParseResult::Flag)
     }
 
-    fn did_you_mean_error(&self, arg: &str, matcher: &mut ArgMatcher<'a>, args_rest: &[&str]) -> ClapResult<()> {
-        // Didn't match a flag or option
-        let suffix = suggestions::did_you_mean_flag_suffix(arg, &args_rest, longs!(self), &self.subcommands);
+        fn get_suggestion(&self, arg: &str, matcher: &mut ArgMatcher<'a>, args_rest: &[&str]) -> Option<String> {
+            // Didn't match a flag or option
+            let suffix = suggestions::did_you_mean_flag_suffix(arg, &args_rest, longs!(self), &self.subcommands);
 
-        // Add the arg to the matches to build a proper usage string
-        if let Some(name) = suffix.1 {
-            if let Some(opt) = find_opt_by_long!(self, name) {
-                self.groups_for_arg(&*opt.b.name)
-                    .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
-                matcher.insert(&*opt.b.name);
-            } else if let Some(flg) = find_flag_by_long!(self, name) {
-                self.groups_for_arg(&*flg.b.name)
-                    .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
-                matcher.insert(&*flg.b.name);
+            // Add the arg to the matches to build a proper usage string
+            if let Some(name) = suffix.1 {
+                if let Some(opt) = find_opt_by_long!(self, name) {
+                    self.groups_for_arg(&*opt.b.name)
+                        .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
+                    matcher.insert(&*opt.b.name);
+                } else if let Some(flg) = find_flag_by_long!(self, name) {
+                    self.groups_for_arg(&*flg.b.name)
+                        .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
+                    matcher.insert(&*flg.b.name);
+                }
+                return Some(suffix.0);
+            } else {
+                return None;
             }
         }
 
-        let used_arg = format!("--{}", arg);
-        Err(Error::unknown_argument(
-            &*used_arg,
-            &*suffix.0,
-            &*usage::create_error_usage(self, matcher, None),
-            self.color(),
-        ))
-    }
-
-    // Prints the version to the user and exits if quit=true
-    fn print_version<W: Write>(&self, w: &mut W, use_long: bool) -> ClapResult<()> {
+        // Prints the version to the user and exits if quit=true
+        fn print_version<W: Write>(&self, w: &mut W, use_long: bool) -> ClapResult<()> {
         self.write_version(w, use_long)?;
         w.flush().map_err(Error::from)
     }
