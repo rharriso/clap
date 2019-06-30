@@ -14,6 +14,17 @@ USAGE:
 
 For more information try --help";
 
+#[cfg(feature = "suggestions")]
+static DYM_MULTI: &'static str = "error: Found argument '--optio' which wasn't expected, or isn't valid in this context
+\tDid you mean --option?
+If you tried to supply `--optio=foo` as a PATTERN use `-- --optio=foo`
+
+USAGE:
+    clap-test --option <opt>...
+
+For more information try --help";
+
+
 #[test]
 fn require_equals_fail() {
     let res = App::new("prog")
@@ -368,6 +379,20 @@ fn did_you_mean() {
                            DYM,
     true));
 }
+
+#[test]
+#[cfg(feature="suggestions")]
+fn did_you_mean_multi() {
+    let app = App::new("clap-test")
+        .arg(Arg::with_name("target").multiple(true))
+        .arg(Arg::with_name("target"));
+
+    assert!(test::compare_output(test::complex_app(),
+                                 "clap-test --optio=foo",
+                                 DYM_MULTI,
+                                 true));
+}
+
 
 #[test]
 fn issue_665() {

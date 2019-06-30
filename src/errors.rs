@@ -814,7 +814,7 @@ impl Error {
     pub fn unknown_argument<A, U>(
         arg: A,
         suggestion: Option<String>,
-        accepts_positional: bool,
+        accepts_multiple: bool,
         usage: U,
         color: ColorWhen
     ) -> Self
@@ -832,7 +832,7 @@ impl Error {
             Some(s) => format!("{}\n", s),
             _ => "\n".to_owned()
         };
-        let suggest_positional = if accepts_positional {
+        let suggest_multiple = if accepts_multiple {
             format!("If you tried to supply `{}` as a PATTERN use `-- {}` \n", a, a)
         } else {
             "".to_string()
