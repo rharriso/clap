@@ -958,7 +958,6 @@ where
                                     return Err(Error::unknown_argument(
                                         &*arg_os.to_string_lossy(),
                                         None,
-                                        false,
                                         &*usage::create_error_usage(self, matcher, None),
                                         self.color(),
                                     ));
@@ -1051,7 +1050,6 @@ where
                     return Err(Error::unknown_argument(
                         &*arg_os.to_string_lossy(),
                         None,
-                        false,
                         &*usage::create_error_usage(self, matcher, None),
                         self.color(),
                     ));
@@ -1127,7 +1125,6 @@ where
                 return Err(Error::unknown_argument(
                     &*arg_os.to_string_lossy(),
                     None,
-                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1153,7 +1150,6 @@ where
                 return Err(Error::unknown_argument(
                     &*arg_os.to_string_lossy(),
                     None,
-                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1635,7 +1631,7 @@ where
         let arg_str = arg.to_str().expect(INVALID_UTF8);
 
         let suggestion =
-         self.get_suggestion(
+         self.get_did_you_mean_text(
             arg_str,
              matcher,
             &args_rest2[..]
@@ -1645,7 +1641,6 @@ where
         Err(Error::unknown_argument(
             format!("--{}", arg_str),
              suggestion,
-             true,
              &*usage,
             self.color(),
         ))
@@ -1738,7 +1733,6 @@ where
                 return Err(Error::unknown_argument(
                     &*arg,
                     None,
-                    false,
                     &*usage::create_error_usage(self, matcher, None),
                     self.color(),
                 ));
@@ -1906,29 +1900,29 @@ where
         Ok(ParseResult::Flag)
     }
 
-        fn get_suggestion(&self, arg: &str, matcher: &mut ArgMatcher<'a>, args_rest: &[&str]) -> Option<String> {
-            // Didn't match a flag or option
-            let suffix = suggestions::did_you_mean_flag_suffix(arg, &args_rest, longs!(self), &self.subcommands);
+    fn get_did_you_mean_text(&self, arg: &str, matcher: &mut ArgMatcher<'a>, args_rest: &[&str]) -> Option<String> {
+        // Didn't match a flag or option
+        let suffix = suggestions::did_you_mean_flag_suffix(arg, &args_rest, longs!(self), &self.subcommands);
 
-            // Add the arg to the matches to build a proper usage string
-            if let Some(name) = suffix.1 {
-                if let Some(opt) = find_opt_by_long!(self, name) {
-                    self.groups_for_arg(&*opt.b.name)
-                        .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
-                    matcher.insert(&*opt.b.name);
-                } else if let Some(flg) = find_flag_by_long!(self, name) {
-                    self.groups_for_arg(&*flg.b.name)
-                        .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
-                    matcher.insert(&*flg.b.name);
-                }
-                return Some(suffix.0);
-            } else {
-                return None;
+        // Add the arg to the matches to build a proper usage string
+        if let Some(name) = suffix.1 {
+            if let Some(opt) = find_opt_by_long!(self, name) {
+                self.groups_for_arg(&*opt.b.name)
+                    .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
+                matcher.insert(&*opt.b.name);
+            } else if let Some(flg) = find_flag_by_long!(self, name) {
+                self.groups_for_arg(&*flg.b.name)
+                    .and_then(|grps| Some(matcher.inc_occurrences_of(&*grps)));
+                matcher.insert(&*flg.b.name);
             }
+            return Some(suffix.0);
+        } else {
+            return None;
         }
+    }
 
-        // Prints the version to the user and exits if quit=true
-        fn print_version<W: Write>(&self, w: &mut W, use_long: bool) -> ClapResult<()> {
+    // Prints the version to the user and exits if quit=true
+    fn print_version<W: Write>(&self, w: &mut W, use_long: bool) -> ClapResult<()> {
         self.write_version(w, use_long)?;
         w.flush().map_err(Error::from)
     }

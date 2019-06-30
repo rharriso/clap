@@ -814,7 +814,6 @@ impl Error {
     pub fn unknown_argument<A, U>(
         arg: A,
         suggestion: Option<String>,
-        accepts_multiple: bool,
         usage: U,
         color: ColorWhen
     ) -> Self
@@ -828,25 +827,24 @@ impl Error {
             use_stderr: true,
             when: color,
         });
+
         let suggestion_str = match suggestion {
             Some(s) => format!("{}\n", s),
             _ => "\n".to_owned()
         };
-        let suggest_multiple = if accepts_multiple {
-            format!("If you tried to supply `{}` as a PATTERN use `-- {}` \n", a, a)
-        } else {
-            "".to_string()
-        };
+
+        let suggest_pattern = format!("If you tried to supply `{}` as a PATTERN use `-- {}`", a, a);
 
         Error {
             message: format!(
                 "{} Found argument '{}' which wasn't expected, or isn't valid in \
-                 this context{}\n\
+                 this context{}\
+                 {}\n\n\
                  {}\n\n\
                  For more information try {}",
-                c.error("error:"),
-                c.warning(&*a),
+                c.error("error:"), c.warning(&*a),
                 suggestion_str,
+                suggest_pattern,
                 usage,
                 c.good("--help")
             ),
