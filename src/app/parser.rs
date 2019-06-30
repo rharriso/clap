@@ -33,7 +33,6 @@ use app::settings::AppSettings as AS;
 use app::validator::Validator;
 use app::usage;
 use map::{self, VecMap};
-use core::borrow::Borrow;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[doc(hidden)]

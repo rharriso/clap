@@ -833,9 +833,9 @@ impl Error {
             _ => "\n".to_owned()
         };
         let suggest_positional = if accepts_positional {
-            format!("If you tried to supply `{}` as a PATTERN use `-- {}` \n", arg, arg)
+            format!("If you tried to supply `{}` as a PATTERN use `-- {}` \n", a, a)
         } else {
-            ""
+            "".to_string()
         };
 
         Error {
