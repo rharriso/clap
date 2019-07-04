@@ -318,6 +318,17 @@ fn global_settings() {
 }
 
 #[test]
+fn generate_completions() {
+    let app = App::new("test")
+        .global_setting(AppSettings::GenerateCompletions);
+    assert!(app
+        .subcommands
+        .iter()
+        .any(|s| s.name == "completions")
+    );
+}
+
+#[test]
 fn stop_delim_values_only_pos_follows() {
     let r = App::new("onlypos")
         .setting(AppSettings::DontDelimitTrailingValues)

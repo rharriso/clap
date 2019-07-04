@@ -45,6 +45,7 @@ bitflags! {
         const INFER_SUBCOMMANDS    = 1 << 37;
         const CONTAINS_LAST        = 1 << 38;
         const ARGS_OVERRIDE_SELF   = 1 << 39;
+        const GENERATE_COMPLETIONS = 1 << 40;
     }
 }
 
@@ -83,6 +84,7 @@ impl AppFlags {
         DisableHelpSubcommand => Flags::DISABLE_HELP_SC,
         DisableVersion => Flags::DISABLE_VERSION,
         GlobalVersion => Flags::GLOBAL_VERSION,
+        GenerateCompletions => Flags::GENERATE_COMPLETIONS,
         HidePossibleValuesInHelp => Flags::NO_POS_VALUES,
         Hidden => Flags::HIDDEN,
         LowIndexMultiplePositional => Flags::LOW_INDEX_MUL_POS,
@@ -568,6 +570,11 @@ pub enum AppSettings {
     /// [``]: ./struct..html
     DeriveDisplayOrder,
 
+    ///
+    ///
+    ///
+    GenerateCompletions,
+
     /// Specifies to use the version of the current command for all child [``]s.
     /// (Defaults to `false`; subcommands have independent version strings from their parents.)
     ///
@@ -921,6 +928,7 @@ impl FromStr for AppSettings {
             "disablehelpsubcommand" => Ok(AppSettings::DisableHelpSubcommand),
             "disableversion" => Ok(AppSettings::DisableVersion),
             "globalversion" => Ok(AppSettings::GlobalVersion),
+            "generateCompletions" => Ok(AppSettings::GenerateCompletions),
             "hidden" => Ok(AppSettings::Hidden),
             "hidepossiblevaluesinhelp" => Ok(AppSettings::HidePossibleValuesInHelp),
             "infersubcommands" => Ok(AppSettings::InferSubcommands),
@@ -1013,6 +1021,10 @@ mod test {
         assert_eq!(
             "globalversion".parse::<AppSettings>().unwrap(),
             AppSettings::GlobalVersion
+        );
+        assert_eq!(
+            "generatecompletions".parse::<AppSettings>().unwrap(),
+            AppSettings::GenerateCompletions
         );
         assert_eq!(
             "hidden".parse::<AppSettings>().unwrap(),
