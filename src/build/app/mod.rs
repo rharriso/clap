@@ -1,3 +1,6 @@
+extern crate clap_generate;
+use clap_generate::{Shell};
+
 mod settings;
 pub use self::settings::{AppFlags, AppSettings};
 
@@ -23,6 +26,7 @@ use crate::parse::errors::Result as ClapResult;
 use crate::parse::{ArgMatcher, ArgMatches, Parser};
 use crate::util::{Key, HELP_HASH, VERSION_HASH};
 use crate::INTERNAL_ERROR_MSG;
+use parse::SubCommand;
 
 type Id = u64;
 
@@ -481,6 +485,7 @@ impl<'b> App<'b> {
     /// [`AppSettings`]: ./enum.AppSettings.html
     pub fn setting(mut self, setting: AppSettings) -> Self {
         self.settings.set(setting);
+        self._generate_completions();
         self
     }
 
@@ -523,6 +528,7 @@ impl<'b> App<'b> {
     pub fn global_setting(mut self, setting: AppSettings) -> Self {
         self.settings.set(setting);
         self.g_settings.set(setting);
+        self._generate_completions();
         self
     }
 
@@ -1365,7 +1371,31 @@ impl<'b> App<'b> {
             }
         }
 
-        self._do_parse(&mut it.peekable())
+        let parse_result = self._do_parse(&mut it.peekable());
+
+        // if GenerateCompletions is set, check for
+        if self.settings.is_set(AppSettings::GenerateCompletions) {
+            if Ok(matches) = parse_result {
+                if Some(completion_cmd) = matches.subcommand_matches("completion") {
+                    let shell_str = matches.value_of("SHELL").expect("Shell is required to generate completion script");
+                    let shell = shell_string_to_shell(shell_str).unwrap();
+                    clap_generate::gen_completions(&mut self.clone(), app.name, shell, &mut io::stdout())
+                }
+            }
+        }
+
+        return parse_result;
+    }
+}
+
+fn shell_string_to_shell(shell_string: String) -> Option<Shell> {
+    match &*shell_string {
+        "bash" => Some(Shell::Bash),
+        "zsh" => Some(Shell::Zsh),
+        "fish" => Some(Shell::fish),
+        "powershell" => Some(Shell::PowerShell),
+        "elvsh" => Shell::PowerShell,
+        _ => Error
     }
 }
 
@@ -1416,6 +1446,7 @@ impl<'b> App<'b> {
 
         self._derive_display_order();
         self._create_help_and_version();
+
         // Perform expensive debug assertions
         debug_assert!({
             for a in self.args.args.iter() {
@@ -1586,6 +1617,16 @@ impl<'b> App<'b> {
             self.subcommands.push(
                 App::new("help")
                     .about("Prints this message or the help of the given subcommand(s)"),
+            );
+        }
+    }
+
+    pub(crate) fn _generate_completions(&mut self) {
+        if self.settings.is_set(AppSettings::GenerateCompletions) {
+            self.subcommands.push(
+                App::new("completions")
+                    .about("Return completions script for the given shell.")
+                    .arg(Arg::with_name("SHELL"))
             );
         }
     }
